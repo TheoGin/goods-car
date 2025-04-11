@@ -134,13 +134,32 @@ class UI {
     this.doms = {
       goodsContainer: document.querySelector(".goods-list"),
       footerPay: document.querySelector(".footer-pay"),
-      carTotalPrice: document.querySelector('.footer-car-total'),
-      carTip: document.querySelector('.footer-car-tip'),
-      car: document.querySelector('.footer-car'),
+      carTotalPrice: document.querySelector(".footer-car-total"),
+      carTip: document.querySelector(".footer-car-tip"),
+      car: document.querySelector(".footer-car"),
     };
     this.createHTML();
     this.updateFooter();
+    this.listenEvent();
+
+    var rect = this.doms.car.getBoundingClientRect()
+    var jumpTarget = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 5,
+    }
+    this.jumpTarget = jumpTarget;
   }
+
+  // 监听各种事件
+  listenEvent() {
+    // 在动画结束之后需要去掉类名，不然下次动画就没效果了
+    this.doms.car.addEventListener("animationend", function () {
+      // 普通函数this：this.doms.car
+      this.classList.remove("animate");
+    });
+  }
+
+  // 根据UIData中UIGoods动态创建html
   createHTML() {
     // console.log(this.uiData.uiGoods);
     var str = "";
@@ -180,7 +199,6 @@ class UI {
     this.uiData.uiGoods[index].increase();
     this.showGoodsItemChooseNum(index);
     this.updateFooter();
-    this.addCarAnimate();
   }
 
   // 商品数量-1
@@ -204,38 +222,82 @@ class UI {
 
   // 更新页脚数据
   updateFooter() {
-   var total = this.uiData.getTotalPrice();
+    var total = this.uiData.getTotalPrice();
     // 更新起送状态
     var span = this.doms.footerPay.querySelector("span");
     if (this.uiData.isCrossDeliveryThreshold()) {
       this.doms.footerPay.classList.add("active");
     } else {
       this.doms.footerPay.classList.remove("active");
-      var dis = Math.round(
-        this.uiData.deliveryThreshold - total
-      );
+      var dis = Math.round(this.uiData.deliveryThreshold - total);
       span.textContent = `还差￥${dis}元起送`;
     }
 
     // 更新价格
     this.doms.carTotalPrice.textContent = total.toFixed(2);
-    
+
     // 更新配送费
     this.doms.carTip.textContent = `配送费${this.uiData.deliveryPrice}`;
 
     // 更新购物车状态
-    var badge = this.doms.car.querySelector('.footer-car-badge');
+    var badge = this.doms.car.querySelector(".footer-car-badge");
     badge.textContent = this.uiData.getTotalChooseNumber();
-    if(this.uiData.hasGoodsInCar()) {
-      this.doms.car.classList.add('active');
+    if (this.uiData.hasGoodsInCar()) {
+      this.doms.car.classList.add("active");
     } else {
-      this.doms.car.classList.remove('active');
+      this.doms.car.classList.remove("active");
     }
   }
 
   // 加入购物车动画
-  addCarAnimate() {
+  carAnimate() {
+    this.doms.car.classList.add("animate");
+    // 动画结束的事件监听不放这，不然每次都加一个事件监听，其实只需监听一次即可！！
+  }
+
+  // 某件商品的加号“抛物线”到购物车
+  jump(index) {
+    // jumpTarget的位置是固定的，所以算一次即可————> 放到构造函数中！！
+
+    // 获取每一件商品左上角的位置
+    var plus =  this.doms.goodsContainer.children[index].querySelector('.i-jiajianzujianjiahao')
+    var rect = plus.getBoundingClientRect();
+    // 动画起始位置
+    var startPos = {
+      x: rect.left,
+      y: rect.top
+    }
+    // 创建加入购物车元素
+    /* <div class="add-to-car">
+         <i class="iconfont i-jiajianzujianjiahao"></i>
+       </div> */
+    var div = document.createElement('div')
+    div.className = 'add-to-car'
+    var i = document.createElement('i')
+    i.className = 'iconfont i-jiajianzujianjiahao'
+    div.appendChild(i)
+    document.body.appendChild(div);
     
+    // 加号起始位置
+    div.style.transform = `translate(${startPos.x}px,${startPos.y}px)`;
+    
+    // 强行渲染
+    div.clientWidth; // 或者用HTML5的window.requestAnimationFrame()
+
+    // 加号最终位置
+    // div.style.transform = `translate(${this.jumpTarget.x}px,${this.jumpTarget.y}px)`;
+
+    // 要达到抛物线（曲线运动）效果：要求初速度和加速度方向不在同一直线
+    // 1. div以匀速的初速度带着 i元素 沿水平方向抛出
+    div.style.transform = `translateX(${this.jumpTarget.x}px)`;
+    // 2. i元素 仅在重力作用下所做的运动
+    i.style.transform = `translateY(${this.jumpTarget.y}px)`;
+    div.addEventListener('animationend', function() {
+      console.log('over');
+    })
+
+    // ?
+    this.carAnimate()
   }
 }
 
