@@ -142,11 +142,11 @@ class UI {
     this.updateFooter();
     this.listenEvent();
 
-    var rect = this.doms.car.getBoundingClientRect()
+    var rect = this.doms.car.getBoundingClientRect();
     var jumpTarget = {
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 5,
-    }
+    };
     this.jumpTarget = jumpTarget;
   }
 
@@ -180,9 +180,9 @@ class UI {
               <span>${this.uiData.uiGoods[i].data.price}</span>
             </p>
             <div class="goods-btns">
-              <i class="iconfont i-jianhao"></i>
+              <i index=${i} class="iconfont i-jianhao"></i>
               <span>0</span>
-              <i class="iconfont i-jiajianzujianjiahao"></i>
+              <i index=${i} class="iconfont i-jiajianzujianjiahao"></i>
             </div>
           </div>
         </div>
@@ -199,6 +199,8 @@ class UI {
     this.uiData.uiGoods[index].increase();
     this.showGoodsItemChooseNum(index);
     this.updateFooter();
+    // 抛物线动画
+    this.jump(index);
   }
 
   // 商品数量-1
@@ -260,27 +262,31 @@ class UI {
     // jumpTarget的位置是固定的，所以算一次即可————> 放到构造函数中！！
 
     // 获取每一件商品左上角的位置
-    var plus =  this.doms.goodsContainer.children[index].querySelector('.i-jiajianzujianjiahao')
+    var plus = this.doms.goodsContainer.children[index].querySelector(
+      ".i-jiajianzujianjiahao"
+    );
     var rect = plus.getBoundingClientRect();
     // 动画起始位置
     var startPos = {
       x: rect.left,
-      y: rect.top
-    }
+      y: rect.top,
+    };
     // 创建加入购物车元素
     /* <div class="add-to-car">
          <i class="iconfont i-jiajianzujianjiahao"></i>
        </div> */
-    var div = document.createElement('div')
-    div.className = 'add-to-car'
-    var i = document.createElement('i')
-    i.className = 'iconfont i-jiajianzujianjiahao'
-    div.appendChild(i)
+    var div = document.createElement("div");
+    div.className = "add-to-car";
+    var i = document.createElement("i");
+    i.className = "iconfont i-jiajianzujianjiahao";
+    div.appendChild(i);
     document.body.appendChild(div);
-    
+
     // 加号起始位置
-    div.style.transform = `translate(${startPos.x}px,${startPos.y}px)`;
-    
+    div.style.transform = `translateX(${startPos.x}px)`;
+    // i元素 仅在重力作用下所做的运动
+    i.style.transform = `translateY(${startPos.y}px)`;
+
     // 强行渲染
     div.clientWidth; // 或者用HTML5的window.requestAnimationFrame()
 
@@ -292,13 +298,36 @@ class UI {
     div.style.transform = `translateX(${this.jumpTarget.x}px)`;
     // 2. i元素 仅在重力作用下所做的运动
     i.style.transform = `translateY(${this.jumpTarget.y}px)`;
-    div.addEventListener('animationend', function() {
-      console.log('over');
-    })
 
-    // ?
-    this.carAnimate()
+    var that = this;
+    div.addEventListener(
+      "transitionend",
+      function () {
+        div.remove();
+        // 抛物线结束后开启第二个动画
+        that.carAnimate(); // 注意普通函数this指向问题。也可用箭头函数解决
+      },
+      {
+        // div加上i有两个过渡效果，会发生两次，所以得开启这个配置项---> 只监听 div 的 transitionend
+        once: true,
+      }
+    );
   }
 }
 
 var ui = new UI();
+
+// 事件：使用事件委托，只用在父元素上面绑定相应的事件，绑定的事件更少，页面的效率更高
+ui.doms.goodsContainer.addEventListener('click', function(e) {
+  // e.target：点击的目标元素
+  
+  if(e.target.classList.contains('i-jiajianzujianjiahao')) {
+    // 加号
+    var index = +e.target.getAttribute('index')
+    ui.increase(index);
+  } else if(e.target.classList.contains('i-jianhao')) {
+    // 减号
+    var index = +e.target.getAttribute('index')
+    ui.decrease(index);
+  }
+})
