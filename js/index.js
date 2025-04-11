@@ -64,7 +64,7 @@ class UIGoods {
   }
 }
 
-// 界面数据类
+// 整个界面的数据
 class UIData {
   constructor() {
     var uiGoods = [];
@@ -127,16 +127,18 @@ class UIData {
   }
 }
 
-// 界面
+// 整个界面
 class UI {
   constructor() {
     this.uiData = new UIData();
-    this.doms = {
+    this.doms = { // 统一获取dom元素
       goodsContainer: document.querySelector(".goods-list"),
       footerPay: document.querySelector(".footer-pay"),
+      footerPayInnerSpan: document.querySelector(".footer-pay span"),
       carTotalPrice: document.querySelector(".footer-car-total"),
       carTip: document.querySelector(".footer-car-tip"),
       car: document.querySelector(".footer-car"),
+      badge: document.querySelector(".footer-car-badge"),
     };
     this.createHTML();
     this.updateFooter();
@@ -159,13 +161,13 @@ class UI {
     });
   }
 
-  // 根据UIData中UIGoods动态创建html
+  // 根据商品数据UIData中UIGoods，创建商品列表元素
   createHTML() {
     // console.log(this.uiData.uiGoods);
-    var str = "";
+    var html = "";
     // 1. 通过innerHTML创建元素
     for (var i = 0; i < this.uiData.uiGoods.length; i++) {
-      str += `<div class="goods-item">
+      html += `<div class="goods-item">
         <img src="${this.uiData.uiGoods[i].data.pic}" alt="" class="goods-pic" />
         <div class="goods-info">
           <h2 class="goods-title">${this.uiData.uiGoods[i].data.title}</h2>
@@ -189,7 +191,7 @@ class UI {
       </div>`;
     }
 
-    this.doms.goodsContainer.innerHTML = str;
+    this.doms.goodsContainer.innerHTML = html;
 
     // 2. 通过createElement创建元素
   }
@@ -210,7 +212,7 @@ class UI {
     this.updateFooter();
   }
 
-  // 展示某件商品的选择数量
+  // 展示某件商品的选择数量的显示状态
   showGoodsItemChooseNum(index) {
     var goodsItem = this.doms.goodsContainer.children[index];
     var chooseNum = goodsItem.querySelector(".goods-btns span");
@@ -224,15 +226,16 @@ class UI {
 
   // 更新页脚数据
   updateFooter() {
+    // 得到总价数据
     var total = this.uiData.getTotalPrice();
     // 更新起送状态
-    var span = this.doms.footerPay.querySelector("span");
-    if (this.uiData.isCrossDeliveryThreshold()) {
+    if (this.uiData.isCrossDeliveryThreshold()) { // 到达起送点
       this.doms.footerPay.classList.add("active");
     } else {
       this.doms.footerPay.classList.remove("active");
+      // 更新还差多少钱
       var dis = Math.round(this.uiData.deliveryThreshold - total);
-      span.textContent = `还差￥${dis}元起送`;
+      this.doms.footerPayInnerSpan.textContent = `还差￥${dis}元起送`;
     }
 
     // 更新价格
@@ -241,14 +244,14 @@ class UI {
     // 更新配送费
     this.doms.carTip.textContent = `配送费${this.uiData.deliveryPrice}`;
 
-    // 更新购物车状态
-    var badge = this.doms.car.querySelector(".footer-car-badge");
-    badge.textContent = this.uiData.getTotalChooseNumber();
+    // 更新购物车的样式状态
     if (this.uiData.hasGoodsInCar()) {
       this.doms.car.classList.add("active");
     } else {
       this.doms.car.classList.remove("active");
     }
+    // 设置购物车中的数量
+    this.doms.badge.textContent = this.uiData.getTotalChooseNumber();
   }
 
   // 加入购物车动画
@@ -264,7 +267,7 @@ class UI {
     // 获取每一件商品左上角的位置
     var plus = this.doms.goodsContainer.children[index].querySelector(
       ".i-jiajianzujianjiahao"
-    );
+    ); // 找到对应商品的加号
     var rect = plus.getBoundingClientRect();
     // 动画起始位置
     var startPos = {
@@ -275,6 +278,7 @@ class UI {
     /* <div class="add-to-car">
          <i class="iconfont i-jiajianzujianjiahao"></i>
        </div> */
+    // 跳吧
     var div = document.createElement("div");
     div.className = "add-to-car";
     var i = document.createElement("i");
@@ -283,20 +287,20 @@ class UI {
     document.body.appendChild(div);
 
     // 加号起始位置
+    // div.style.transform = `translate(${startPos.x}px,${startPos.y}px)`;
+    // 要达到抛物线（曲线运动）效果：要求初速度和加速度方向不在同一直线
+    // 1. div以匀速的初速度带着 i元素 沿水平方向抛出
     div.style.transform = `translateX(${startPos.x}px)`;
-    // i元素 仅在重力作用下所做的运动
+    // 2. i元素 仅在重力作用下所做的运动
     i.style.transform = `translateY(${startPos.y}px)`;
 
     // 强行渲染
     div.clientWidth; // 或者用HTML5的window.requestAnimationFrame()
 
-    // 加号最终位置
+    // 设置结束位置
     // div.style.transform = `translate(${this.jumpTarget.x}px,${this.jumpTarget.y}px)`;
-
-    // 要达到抛物线（曲线运动）效果：要求初速度和加速度方向不在同一直线
-    // 1. div以匀速的初速度带着 i元素 沿水平方向抛出
+    // 和上面同理
     div.style.transform = `translateX(${this.jumpTarget.x}px)`;
-    // 2. i元素 仅在重力作用下所做的运动
     i.style.transform = `translateY(${this.jumpTarget.y}px)`;
 
     var that = this;
@@ -309,7 +313,7 @@ class UI {
       },
       {
         // div加上i有两个过渡效果，会发生两次，所以得开启这个配置项---> 只监听 div 的 transitionend
-        once: true,
+        once: true, // 事件仅触发一次
       }
     );
   }
@@ -330,4 +334,12 @@ ui.doms.goodsContainer.addEventListener('click', function(e) {
     var index = +e.target.getAttribute('index')
     ui.decrease(index);
   }
+})
+
+window.addEventListener('keypress', function(e) {
+  if(e.code === 'Equal') { // 加号
+    ui.increase(0)
+  } else if(e.code === 'Minus') { // 加号
+    ui.decrease(0)
+  } 
 })
